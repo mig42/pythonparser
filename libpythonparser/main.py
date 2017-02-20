@@ -2,6 +2,7 @@ import sys
 import io
 import logging
 import ast
+import asttokens
 
 logger = logging.getLogger(__name__)
 
@@ -18,21 +19,17 @@ def main(args):
         sys.exit(1)
 
     try:
-        syntax_tree = ast.parse(source, filename=filepath, mode="exec")
-        ast.fix_missing_locations(syntax_tree)
+        atok = asttokens.ASTTokens(source, parse=True)
     except Exception as ex:
         logger.exception("Unable to parse file '{0}'", filepath)
+        return
 
-    if syntax_tree is None:
-        logger.info("Tree was None.")
+    if atok is None:
+        logger.info("Parsing returned an empty tree.")
         sys.exit(1)
 
-    for fieldname, value in ast.iter_fields(syntax_tree):
-        print("{0}: {1}".format(fieldname, value))
-
-    print_fields(syntax_tree)
-    for node in ast.iter_child_nodes(syntax_tree):
-        print_fields(node)
+    visitor = MyNodeVisitor(atok)
+    visitor.visit(atok.tree)
 
 
 def read_source(filepath):
@@ -44,10 +41,55 @@ def read_source(filepath):
         return None
 
 
-def print_fields(node):
-    print(type(node).__name__)
-    if type(node) is not ast.Module:
-        print("lineno: {0}; col: {1};".format(node.lineno, node.col_offset))
-    for fieldname, value in ast.iter_fields(node):
-        print("{0}: {1}".format(fieldname, value))
-    print("---")
+class MyNodeVisitor(ast.NodeVisitor):
+
+    def __init__(self, atok):
+        self._atok = atok
+
+    def visit_Module(self, node):
+        print("Module!")
+        self.print(node)
+        self.generic_visit(node)
+
+    def visit_Import(self, node):
+        print("Import!")
+        self.print(node)
+
+    def visit_ImportFrom(self, node):
+        print("Import from!")
+        self.print(node)
+
+    def visit_Expression(self, node):
+        print("Expression!")
+        self.print(node)
+
+    def visit_Assign(self, node):
+        print("Assign!")
+        self.print(node)
+
+    def visit_AugAssign(self, node):
+        print("Assign!")
+        self.print(node)
+
+    def visit_FunctionDef(self, node):
+        print("Function!")
+        self.print(node)
+
+    def visit_AsyncFunctionDef(self, node):
+        print("AsyncFunction!")
+        self.print(node)
+
+    def visit_ClassDef(self, node):
+        print("Class!")
+        print("lineno: {}; col_offset: {};".format(node.lineno, node.col_offset))
+        print("name: {}".format(node.name))
+        self.print(node)
+        self.generic_visit(node)
+
+    def print(self, node):
+        print(type(node))
+        print(self._atok.get_text_range(node))
+        print(self._atok.get_text(node))
+        print("###")
+        print()
+        print()
