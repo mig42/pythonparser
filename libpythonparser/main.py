@@ -4,10 +4,10 @@ import logging
 import ast
 import asttokens
 
-from libpythonparser.file import File
-from libpythonparser.container import Container
-from libpythonparser.location import Location
-from libpythonparser.node import Node
+from .file import File
+from .container import Container
+from .location import Location
+from .node import Node
 
 logger = logging.getLogger(__name__)
 
