@@ -12,7 +12,7 @@ def main(args):
         sys.exit(1)
 
     filepath = args[0]
-    logger.info("Parsing file '{0}'", filepath)
+    logger.info("Parsing file '%s'", filepath)
 
     source = read_source(filepath)
     if source is None:
@@ -21,7 +21,7 @@ def main(args):
     try:
         atok = asttokens.ASTTokens(source, parse=True)
     except Exception as ex:
-        logger.exception("Unable to parse file '{0}'", filepath)
+        logger.exception("Unable to parse file '%s'", filepath, exc_info=ex)
         sys.exit(1)
 
     if atok is None:
@@ -37,7 +37,7 @@ def read_source(filepath):
         with io.open(filepath, "r", encoding="utf8") as file:
             return file.read()
     except:
-        logger.exception("Unable to read contents from file '{0}'", filepath)
+        logger.exception("Unable to read contents from file '%s'", filepath)
         return None
 
 
