@@ -22,7 +22,7 @@ def main(args):
         atok = asttokens.ASTTokens(source, parse=True)
     except Exception as ex:
         logger.exception("Unable to parse file '{0}'", filepath)
-        return
+        sys.exit(1)
 
     if atok is None:
         logger.info("Parsing returned an empty tree.")
