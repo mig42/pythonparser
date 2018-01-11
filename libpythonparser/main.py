@@ -33,9 +33,7 @@ def main(args):
         logger.info("Parsing returned an empty tree.")
         sys.exit(1)
 
-    file_location = Location(
-        atok.tree.first_token.start, atok.tree.last_token.end)
-    visitor = MyNodeVisitor(atok, File(filepath, file_location))
+    visitor = MyNodeVisitor(atok, File(filepath, get_node_location(atok.tree)))
     visitor.visit(atok.tree)
 
 
@@ -46,6 +44,10 @@ def read_source(filepath):
     except:
         logger.exception("Unable to read contents from file '%s'", filepath)
         return None
+
+
+def get_node_location(node):
+    return Location(node.first_token.start, node.last_token.end)
 
 
 class MyNodeVisitor(ast.NodeVisitor):
@@ -59,14 +61,14 @@ class MyNodeVisitor(ast.NodeVisitor):
         print("Module!")
         self.print(node)
         self._current_container = Container(
-            'module', self.get_range(node), (0, -1), (0, -1))
+            'module',
+            get_node_location(node),
+            (0, -1),
+            (0, -1))
         self._file.add_child(self._current_container)
 
         self.generic_visit(node)
         self._current_container = None
-
-    def get_range(self, node):
-        return Location((node.lineno, node.col_offset), (0, -1))
 
     def visit_Import(self, node):
         print("Import!")
@@ -91,7 +93,7 @@ class MyNodeVisitor(ast.NodeVisitor):
         self.print(node)
 
         self._current_container = Container(
-            'module', self.get_range(node), (0, -1), (0, -1))
+            'class', get_node_location(node), (0, -1), (0, -1))
         self._file.add_child(self._current_container)
 
         self.generic_visit(node)
