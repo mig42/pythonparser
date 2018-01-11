@@ -4,6 +4,11 @@ import logging
 import ast
 import asttokens
 
+from libpythonparser.file import File
+from libpythonparser.container import Container
+from libpythonparser.location import Location
+from libpythonparser.node import Node
+
 logger = logging.getLogger(__name__)
 
 
@@ -28,7 +33,9 @@ def main(args):
         logger.info("Parsing returned an empty tree.")
         sys.exit(1)
 
-    visitor = MyNodeVisitor(atok)
+    file_location = Location(
+        atok.tree.first_token.start, atok.tree.last_token.end)
+    visitor = MyNodeVisitor(atok, File(filepath, file_location))
     visitor.visit(atok.tree)
 
 
@@ -43,13 +50,23 @@ def read_source(filepath):
 
 class MyNodeVisitor(ast.NodeVisitor):
 
-    def __init__(self, atok):
+    def __init__(self, atok, file):
         self._atok = atok
+        self._file = file
+        self._current_container = None
 
     def visit_Module(self, node):
         print("Module!")
         self.print(node)
+        self._current_container = Container(
+            'module', self.get_range(node), (0, -1), (0, -1))
+        self._file.add_child(self._current_container)
+
         self.generic_visit(node)
+        self._current_container = None
+
+    def get_range(self, node):
+        return Location((node.lineno, node.col_offset), (0, -1))
 
     def visit_Import(self, node):
         print("Import!")
@@ -57,18 +74,6 @@ class MyNodeVisitor(ast.NodeVisitor):
 
     def visit_ImportFrom(self, node):
         print("Import from!")
-        self.print(node)
-
-    def visit_Expression(self, node):
-        print("Expression!")
-        self.print(node)
-
-    def visit_Assign(self, node):
-        print("Assign!")
-        self.print(node)
-
-    def visit_AugAssign(self, node):
-        print("Assign!")
         self.print(node)
 
     def visit_FunctionDef(self, node):
@@ -84,7 +89,13 @@ class MyNodeVisitor(ast.NodeVisitor):
         print("lineno: {}; col_offset: {};".format(node.lineno, node.col_offset))
         print("name: {}".format(node.name))
         self.print(node)
+
+        self._current_container = Container(
+            'module', self.get_range(node), (0, -1), (0, -1))
+        self._file.add_child(self._current_container)
+
         self.generic_visit(node)
+        self._current_container = None
 
     def print(self, node):
         print(type(node))
