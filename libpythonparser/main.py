@@ -9,7 +9,7 @@ from .container import Container
 from .location import Location
 from .node import Node
 
-logger = logging.getLogger(__name__)
+LOGGER = logging.getLogger(__name__)
 
 
 def main(args):
@@ -17,7 +17,7 @@ def main(args):
         sys.exit(1)
 
     filepath = args[0]
-    logger.info("Parsing file '%s'", filepath)
+    LOGGER.info("Parsing file '%s'", filepath)
 
     source = read_source(filepath)
     if source is None:
@@ -26,11 +26,11 @@ def main(args):
     try:
         atok = asttokens.ASTTokens(source, parse=True)
     except Exception as ex:
-        logger.exception("Unable to parse file '%s'", filepath, exc_info=ex)
+        LOGGER.exception("Unable to parse file '%s'", filepath, exc_info=ex)
         sys.exit(1)
 
     if atok is None:
-        logger.info("Parsing returned an empty tree.")
+        LOGGER.info("Parsing returned an empty tree.")
         sys.exit(1)
 
     visitor = MyNodeVisitor(atok, File(filepath, get_node_location(atok.tree)))
@@ -42,7 +42,7 @@ def read_source(filepath):
         with io.open(filepath, "r", encoding="utf8") as file:
             return file.read()
     except:
-        logger.exception("Unable to read contents from file '%s'", filepath)
+        LOGGER.exception("Unable to read contents from file '%s'", filepath)
         return None
 
 
