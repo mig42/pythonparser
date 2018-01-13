@@ -93,8 +93,8 @@ class MyNodeVisitor(ast.NodeVisitor):
 
     def visit_Module(self, node):
         module = self.add_new_container(node, 'module')
-        module.set_header(None)
-        module.set_footer(None)
+        module.set_header((0, -1))
+        module.set_footer((0, -1))
 
         self.generic_visit(node)
         self.remove_last_container()
@@ -113,8 +113,8 @@ class MyNodeVisitor(ast.NodeVisitor):
 
     def visit_ClassDef(self, node):
         module = self.add_new_container(node, 'class')
-        module.set_header(None)
-        module.set_footer(None)
+        module.set_header((node.first_token.startpos, node.first_token.endpos))
+        module.set_footer((0, -1))
 
         self.generic_visit(node)
         self.remove_last_container()
