@@ -1,6 +1,9 @@
 import io
 import logging
+import json
+import os
 import sys
+
 import ast
 import asttokens
 
@@ -33,8 +36,11 @@ def main(args):
         LOGGER.info("Parsing returned an empty tree.")
         sys.exit(1)
 
-    visitor = MyNodeVisitor(atok, File(filepath, get_node_location(atok.tree)))
+    source_file = File(os.path.basename(filepath), get_node_location(atok.tree))
+    visitor = MyNodeVisitor(atok, source_file)
     visitor.visit(atok.tree)
+
+    print(json.dumps(source_file, default=lambda x: x.__dict__))
 
 
 def read_source(filepath):
@@ -57,10 +63,22 @@ class MyNodeVisitor(ast.NodeVisitor):
         self._containers = [file]
 
     def add_new_container(self, node, node_type):
-        container = Container(node_type, node.name, get_node_location(node))
+        container = Container(
+            node_type,
+            self.get_node_name(node),
+            get_node_location(node))
         self._containers[-1].add_child(container)
         self._containers.append(container)
         return container
+
+    def get_node_name(self, node):
+        if (hasattr(node, 'name')):
+            return node.name
+        return self.get_module_name()
+
+    def get_module_name(self):
+        filename = self._containers[0].name
+        return os.path.splitext(filename)[0]
 
     def remove_last_container(self):
         self._containers.pop()
@@ -68,7 +86,7 @@ class MyNodeVisitor(ast.NodeVisitor):
     def add_new_node(self, node, node_type):
         result = Node(
             node_type,
-            node.name,
+            self.get_node_name(node),
             get_node_location(node),
             self._atok.get_text_range(node))
         self._containers[-1].add_child(result)
