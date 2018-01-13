@@ -5,3 +5,7 @@ Include
 pyvenv.cfg
 tcl
 pip-selfcheck.json
+lib
+include
+bin
+lib64
