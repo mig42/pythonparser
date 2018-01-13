@@ -56,8 +56,8 @@ class MyNodeVisitor(ast.NodeVisitor):
         self._atok = atok
         self._containers = [file]
 
-    def add_new_container(self, node, name):
-        container = Container(name, get_node_location(node))
+    def add_new_container(self, node, node_type):
+        container = Container(node_type, node.name, get_node_location(node))
         self._containers[-1].add_child(container)
         self._containers.append(container)
         return container
@@ -65,9 +65,10 @@ class MyNodeVisitor(ast.NodeVisitor):
     def remove_last_container(self):
         self._containers.pop()
 
-    def add_new_node(self, node, name):
+    def add_new_node(self, node, node_type):
         result = Node(
-            name,
+            node_type,
+            node.name,
             get_node_location(node),
             self._atok.get_text_range(node))
         self._containers[-1].add_child(result)

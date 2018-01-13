@@ -1,6 +1,6 @@
 class Container:
-    def __init__(self, name, location):
-        self.type = 'file'
+    def __init__(self, container_type, name, location):
+        self.container_type = container_type
         self.name = name
         self.location = location
         self.children = []
