@@ -54,55 +54,48 @@ class MyNodeVisitor(ast.NodeVisitor):
 
     def __init__(self, atok, file):
         self._atok = atok
-        self._file = file
-        self._current_container = None
+        self._containers = [file]
+
+    def add_new_container(self, node, name):
+        container = Container(name, get_node_location(node))
+        self._containers[-1].add_child(container)
+        self._containers.append(container)
+        return container
+
+    def remove_last_container(self):
+        self._containers.pop()
+
+    def add_new_node(self, node, name):
+        result = Node(
+            name,
+            get_node_location(node),
+            self._atok.get_text_range(node))
+        self._containers[-1].add_child(result)
 
     def visit_Module(self, node):
-        print("Module!")
-        self.print(node)
-        self._current_container = Container(
-            'module',
-            get_node_location(node),
-            (0, -1),
-            (0, -1))
-        self._file.add_child(self._current_container)
+        module = self.add_new_container(node, 'module')
+        module.set_header(None)
+        module.set_footer(None)
 
         self.generic_visit(node)
-        self._current_container = None
+        self.remove_last_container()
 
     def visit_Import(self, node):
-        print("Import!")
-        self.print(node)
+        self.add_new_node(node, 'import')
 
     def visit_ImportFrom(self, node):
-        print("Import from!")
-        self.print(node)
+        self.add_new_node(node, 'import')
 
     def visit_FunctionDef(self, node):
-        print("Function!")
-        self.print(node)
+        self.add_new_node(node, 'function')
 
     def visit_AsyncFunctionDef(self, node):
-        print("AsyncFunction!")
-        self.print(node)
+        self.add_new_node(node, 'function')
 
     def visit_ClassDef(self, node):
-        print("Class!")
-        print("lineno: {}; col_offset: {};".format(node.lineno, node.col_offset))
-        print("name: {}".format(node.name))
-        self.print(node)
-
-        self._current_container = Container(
-            'class', get_node_location(node), (0, -1), (0, -1))
-        self._file.add_child(self._current_container)
+        module = self.add_new_container(node, 'class')
+        module.set_header(None)
+        module.set_footer(None)
 
         self.generic_visit(node)
-        self._current_container = None
-
-    def print(self, node):
-        print(type(node))
-        print(self._atok.get_text_range(node))
-        print(self._atok.get_text(node))
-        print("###")
-        print()
-        print()
+        self.remove_last_container()
