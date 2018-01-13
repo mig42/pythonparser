@@ -4,3 +4,6 @@ class Node:
         self.name = name
         self.location = location
         self.span = span
+
+    def set_name(self, name):
+        self.name = name

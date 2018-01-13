@@ -90,6 +90,7 @@ class MyNodeVisitor(ast.NodeVisitor):
             get_node_location(node),
             self._atok.get_text_range(node))
         self._containers[-1].add_child(result)
+        return result
 
     def visit_Module(self, node):
         module = self.add_new_container(node, 'module')
@@ -100,10 +101,12 @@ class MyNodeVisitor(ast.NodeVisitor):
         self.remove_last_container()
 
     def visit_Import(self, node):
-        self.add_new_node(node, 'import')
+        the_import = self.add_new_node(node, 'import')
+        the_import.set_name(node.names[0].name)
 
     def visit_ImportFrom(self, node):
-        self.add_new_node(node, 'import')
+        the_import = self.add_new_node(node, 'import')
+        the_import.set_name('{0}.{1}'.format(node.module, node.names[0].name))
 
     def visit_FunctionDef(self, node):
         self.add_new_node(node, 'function')
