@@ -3,6 +3,7 @@ import logging
 import json
 import os
 import sys
+import token
 
 import ast
 import asttokens
@@ -93,31 +94,68 @@ class MyNodeVisitor(ast.NodeVisitor):
         return result
 
     def visit_Module(self, node):
-        module = self.add_new_container(node, 'module')
-        module.set_header((0, -1))
-        module.set_footer((0, -1))
+        self.add_new_container(node, 'module')
 
         self.generic_visit(node)
         self.remove_last_container()
 
     def visit_Import(self, node):
         the_import = self.add_new_node(node, 'import')
-        the_import.set_name(node.names[0].name)
+        the_import.name = node.names[0].name
+        self.fix_node_span_start(node, the_import)
 
     def visit_ImportFrom(self, node):
         the_import = self.add_new_node(node, 'import')
-        the_import.set_name('{0}.{1}'.format(node.module, node.names[0].name))
+        the_import.name = '{0}.{1}'.format(node.module, node.names[0].name)
+        self.fix_node_span_start(node, the_import)
 
     def visit_FunctionDef(self, node):
-        self.add_new_node(node, 'function')
+        self.process_function(node)
 
     def visit_AsyncFunctionDef(self, node):
-        self.add_new_node(node, 'function')
+        self.process_function(node)
 
     def visit_ClassDef(self, node):
-        module = self.add_new_container(node, 'class')
-        module.set_header((node.first_token.startpos, node.first_token.endpos))
-        module.set_footer((0, -1))
+        the_class = self.add_new_container(node, 'class')
+        endpos = node.first_token.endpos
+        startpos = node.first_token.startpos
+
+        leading_newline = self.find_first_leading_newline(node)
+        if leading_newline is not None:
+            the_class.location.start = leading_newline.start
+            startpos = leading_newline.startpos
+
+        the_class.header_span = (startpos, endpos)
 
         self.generic_visit(node)
         self.remove_last_container()
+
+    def process_function(self, node):
+        function = self.add_new_node(node, 'function')
+        self.fix_node_span_start(node, function)
+
+    def fix_node_span_start(self, ast_node, api_node):
+        leading_newline = self.find_first_leading_newline(ast_node)
+        if leading_newline is None:
+            return
+
+        api_node.location.start = leading_newline.start
+        api_node.span = (leading_newline.startpos, api_node.span[1])
+
+    def find_first_leading_newline(self, node):
+        result = None
+        cur_token = self._atok.prev_token(node.first_token, include_extra=True)
+
+        while self.is_leading_token(cur_token):
+            result = cur_token
+            cur_token = self._atok.prev_token(cur_token, include_extra=True)
+
+        return result
+
+    def is_leading_token(self, ast_token):
+        tok_name = token.tok_name[ast_token.type]
+        if tok_name == 'DEDENT' or tok_name == 'NL' or tok_name == 'COMMENT':
+            return True
+        if ast_token.string.startswith('"""'):
+            return True
+        return False

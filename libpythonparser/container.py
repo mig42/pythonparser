@@ -3,13 +3,9 @@ class Container:
         self.type = container_type
         self.name = name
         self.location = location
+        self.header_span = (0, -1)
+        self.footer_span = (0, -1)
         self.children = []
-
-    def set_header(self, header):
-        self.header_span = header
-
-    def set_footer(self, footer):
-        self.footer_span = footer
 
     def add_child(self, child):
         self.children.append(child)
