@@ -94,10 +94,21 @@ class MyNodeVisitor(ast.NodeVisitor):
         return result
 
     def visit_Module(self, node):
-        self.add_new_container(node, 'module')
+        the_module = self.add_new_container(node, 'module')
 
         self.generic_visit(node)
+
+        if the_module.children:
+            child_start = the_module.children[0].location.start
+            if child_start != the_module.location.start:
+                span_end = self._atok._line_numbers.line_to_offset(
+                    child_start[0], child_start[1]) - 1
+                the_module.header_span = (0, span_end)
+
+        # Calculate footer here
+
         self.remove_last_container()
+
 
     def visit_Import(self, node):
         the_import = self.add_new_node(node, 'import')
