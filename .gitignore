@@ -10,3 +10,4 @@ include
 bin
 lib64
 .vscode
+*.pyc
