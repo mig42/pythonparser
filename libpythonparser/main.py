@@ -23,25 +23,8 @@ def main(args):
     filepath = args[0]
     LOGGER.info("Parsing file '%s'", filepath)
 
-    source = read_source(filepath)
-    if source is None:
-        sys.exit(1)
-
-    try:
-        atok = asttokens.ASTTokens(source, parse=True)
-    except Exception as ex:
-        LOGGER.exception("Unable to parse file '%s'", filepath, exc_info=ex)
-        sys.exit(1)
-
-    if atok is None:
-        LOGGER.info("Parsing returned an empty tree.")
-        sys.exit(1)
-
-    source_file = File(os.path.basename(filepath), get_node_location(atok.tree))
-    visitor = MyNodeVisitor(atok, source_file)
-    visitor.visit(atok.tree)
-
-    print(json.dumps(source_file, default=lambda x: x.__dict__))
+    parsed_file = parse_file(filepath)
+    print(json.dumps(parsed_file, default=lambda x: x.__dict__))
 
 
 def read_source(filepath):
@@ -51,6 +34,46 @@ def read_source(filepath):
     except:
         LOGGER.exception("Unable to read contents from file '%s'", filepath)
         return None
+
+
+def parse_file(filepath):
+    source = read_source(filepath)
+    if source is None:
+        return build_from_message(
+            filepath, "File not found: {0}".format(filepath))
+
+    try:
+        atok = asttokens.ASTTokens(source, parse=True)
+    except SyntaxError as ex:
+        LOGGER.exception("Unable to parse file '%s'", filepath, exc_info=ex)
+        return build_from_exception(filepath, ex)
+
+    if atok is None:
+        LOGGER.info("Parsing returned an empty tree.")
+        return build_from_message(
+            filepath,
+            "Parsing returned an empty tree: {0}".format(filepath))
+
+    source_file = File(
+        os.path.basename(filepath),
+        get_node_location(atok.tree))
+    visitor = MyNodeVisitor(atok, source_file)
+    visitor.visit(atok.tree)
+
+    return source_file
+
+
+def build_from_message(filepath, message):
+    result = File(filepath, Location((0, -1), (0, -1)))
+    result.add_parsing_error(message)
+    return result
+
+
+def build_from_exception(filepath, exception):
+    result = File(exception.filename, Location((0, -1), (0, -1)))
+    result.add_parsing_error("{0}:{1} -> {2}".format(
+        filepath, exception.lineno, exception.msg))
+    return result
 
 
 def get_node_location(node):
@@ -105,9 +128,18 @@ class MyNodeVisitor(ast.NodeVisitor):
                     child_start[0], child_start[1]) - 1
                 the_module.header_span = (0, span_end)
 
-        # Calculate footer here
+        end_marker = self.find_end_marker(node.last_token)
+        if end_marker.end > node.last_token.end:
+            the_module.location.end = end_marker.end
+            the_module.footer_span = (node.last_token.endpos + 1, end_marker.endpos)
 
         self.remove_last_container()
+        self._containers[-1].location.end = the_module.location.end
+
+    def find_end_marker(self, ast_token):
+        while token.tok_name[ast_token.type] != 'ENDMARKER':
+            ast_token = self._atok.next_token(ast_token, include_extra=True)
+        return ast_token
 
 
     def visit_Import(self, node):
